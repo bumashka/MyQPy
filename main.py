@@ -115,8 +115,6 @@ class MyQPy:
         xy = self.deutsch_oracle(type) @ xy
 
         xy = np.kron(self.HADAMARD, self.I) @ xy
-        
-        xy = np.kron(self.KET_0 @ np.transpose(self.KET_0), self.I) @ xy
 
         # дополнительная лекция по измерениям №5
         # считаем матрицу плотности полученного состояния, через внешнее произведение
@@ -135,7 +133,31 @@ class MyQPy:
         print(f"f(x)=x   : {self.deutsch_alg(2)}")
         print(f"f(x)=!x  : {self.deutsch_alg(3)}")
 
+    def bernstein_vazirani_alg(self, number: str):
+        number = list(number)
+        n = len(number)
+
+
+        system = self.KET_0
+        hadamard_system = self.HADAMARD
+
+        for i in range(0, n ):
+            system = np.kron(system, self.KET_0)
+            hadamard_system = np.kron(hadamard_system, self.HADAMARD)
+
+        system = np.kron(system, self.X @ self.KET_0)
+        result_system = np.kron(hadamard_system, self.HADAMARD) @ system
+        oracle = 1
+        for i in range(0, n):
+            if number[i] == '1':
+                oracle = np.kron(oracle, self.X)
+            else:
+                oracle = np.kron(oracle, self.I)
+        oracle = np.kron(oracle, self.I)
+        result_system = oracle @ result_system
+
+        result_system = np.kron(hadamard_system, self.I) @ result_system
 
 if __name__ == '__main__':
     my_q_py = MyQPy()
-    my_q_py.perform_deutsch_alg()
+    my_q_py.bernstein_vazirani_alg('0010101')
