@@ -5,7 +5,7 @@ class MyQPy:
 
     def __init__(self):
         self.KET_0 = np.array([[1], [0]], dtype=complex)
-        self.HADAMART = np.array([
+        self.HADAMARD = np.array([
             [1, 1],
             [1, -1]
         ], dtype=complex) / np.sqrt(2)
@@ -13,21 +13,33 @@ class MyQPy:
         self.X = np.array([
             [0, 1],
             [1, 0]
-        ], dtype=complex) / np.sqrt(2)
+        ], dtype=complex)
+
+        self.I = np.array([
+            [1, 0],
+            [0, 1]
+        ], dtype=complex)
+
+        self.CNOT = np. array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0]
+        ], dtype=complex)
 
     def measure(self, state):
         # pr0 = np.abs(np.transpose(state)@self.KET_0) ** 2
         pr0 = np.abs(state[0, 0]) ** 2
-        print("Measure\npr0: " + str(pr0))
+        #print("Measure\npr0: " + str(pr0))
         sample = np.random.random() <= pr0
-        print("sample: " + str(sample))
+        #print("sample: " + str(sample))
         return False if sample else True
 
     def random_generator(self):
         qubit = self.KET_0.copy()
-        qubit = self.HADAMART @ qubit
+        qubit = self.HADAMARD @ qubit
         result = self.measure(qubit)
-        print("random_generator returned " + str(result))
+        #print("random_generator returned " + str(result))
         return result
 
     def send_single_bit_with_bb84(self):
@@ -41,7 +53,7 @@ class MyQPy:
         received_qubit = qubit.copy()
 
         if eva_basis:
-            received_qubit = self.HADAMART @ qubit
+            received_qubit = self.HADAMARD @ qubit
 
         result = self.measure(received_qubit)
 
@@ -67,7 +79,7 @@ class MyQPy:
         if bit:
             qubit = self.X @ qubit
         if basis:
-            qubit = self.HADAMART @ qubit
+            qubit = self.HADAMARD @ qubit
         return qubit
 
     def bit_from_qubit(self):
@@ -83,7 +95,47 @@ class MyQPy:
             print(i)
             self.random_generator()
 
+    def deutsch_oracle(self, type):
+        if type == 0:
+            return np.kron(self.I, self.I)
+        elif type == 1:
+            return np.kron(self.I, self.X)
+        elif type == 2:
+            return self.CNOT
+        else:
+            return np.kron(self.X, self.I) @ self.CNOT @ np.kron(self.X, self.I)
+
+    def deutsch_alg(self, type):
+        x = self.KET_0
+
+        y = self.X @ self.KET_0
+
+        xy = np.kron(self.HADAMARD, self.HADAMARD) @ np.kron(x, y)
+
+        xy = self.deutsch_oracle(type) @ xy
+
+        xy = np.kron(self.HADAMARD, self.I) @ xy
+        
+        xy = np.kron(self.KET_0 @ np.transpose(self.KET_0), self.I) @ xy
+
+        # дополнительная лекция по измерениям №5
+        # считаем матрицу плотности полученного состояния, через внешнее произведение
+        rho = np.outer(xy, np.conj(xy))
+
+        # trace - след матрицы, сумма элементов по диагонали
+        # np.dot - скалярное произведение
+
+        prob_0 = np.trace(np.kron(self.KET_0 @ np.transpose(self.KET_0), self.I) @ rho)
+
+        return '[0>' if prob_0.round() > 0 else '[1>'
+
+    def perform_deutsch_alg(self):
+        print(f"f(x)=0   : {self.deutsch_alg(0)}")
+        print(f"f(x)=1   : {self.deutsch_alg(1)}")
+        print(f"f(x)=x   : {self.deutsch_alg(2)}")
+        print(f"f(x)=!x  : {self.deutsch_alg(3)}")
+
 
 if __name__ == '__main__':
     my_q_py = MyQPy()
-    my_q_py.bb84(10)
+    my_q_py.perform_deutsch_alg()
