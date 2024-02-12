@@ -95,6 +95,16 @@ class MyQPy:
             print(i)
             self.random_generator()
 
+    def preform_bb84(self):
+        key = int(self.bb84(96), base=2)
+        print("We got the key: " + hex(key))
+        message = int("110110000011110111011100100101101101100000111101110111000000110111011000001111011101110010111011", base=2)
+        print("We will use the key to send message: " + hex(message))
+        encrypted_message = message ^ key
+        print("Encrypted message: " + hex(encrypted_message))
+        decrypted_message = encrypted_message ^ key
+        print("Eva decrypted and got message: " + hex(decrypted_message))
+
     def deutsch_oracle(self, type):
         if type == 0:
             return np.kron(self.I, self.I)
@@ -137,27 +147,61 @@ class MyQPy:
         number = list(number)
         n = len(number)
 
-
         system = self.KET_0
         hadamard_system = self.HADAMARD
 
-        for i in range(0, n ):
+        for i in range(0, n - 1):
             system = np.kron(system, self.KET_0)
             hadamard_system = np.kron(hadamard_system, self.HADAMARD)
 
         system = np.kron(system, self.X @ self.KET_0)
         result_system = np.kron(hadamard_system, self.HADAMARD) @ system
-        oracle = 1
+
+        oracle = np.eye(2**(n+1))
         for i in range(0, n):
             if number[i] == '1':
-                oracle = np.kron(oracle, self.X)
-            else:
-                oracle = np.kron(oracle, self.I)
-        oracle = np.kron(oracle, self.I)
+                oracle = oracle @ self.build_up_CNOT(i, n)
         result_system = oracle @ result_system
 
-        result_system = np.kron(hadamard_system, self.I) @ result_system
+        result_system = np.kron(hadamard_system, self.HADAMARD) @ result_system
+
+        # дополнительная лекция по измерениям №5
+        # считаем матрицу плотности полученного состояния, через внешнее произведение
+        rho = np.outer(result_system, np.conj(result_system))
+
+        # trace - след матрицы, сумма элементов по диагонали
+        # np.dot - скалярное произведение
+        message = []
+        for i in range(0, n):
+            before_cubit = np.eye(2**(i)) if i > 0 else 1
+            after_cubit = np.eye(2**(n - i))
+            projector = np.kron(before_cubit, np.kron(self.KET_0 @ np.transpose(self.KET_0), after_cubit))
+            prob_0 = np.trace(projector @ rho)
+            message.append('0') if prob_0.round() > 0 else message.append('1')
+
+        print(f"The string we got is: {number}")
+        print(f"The string we got using the algorithm is: {message}")
+
+    def build_up_CNOT(self, control: int, target: int, reverse=False):
+
+        controlled_proj = self.KET_0 @ np.transpose(self.KET_0)
+        target_proj = (self.X @ self.KET_0) @ np.transpose(self.X @ self.KET_0)
+
+        for i in range(control, target - 1):
+            controlled_proj = np.kron(controlled_proj, self.I)
+            target_proj = np.kron(target_proj, self.I)
+
+        controlled_proj = np.kron(controlled_proj, self.I)
+        target_proj = np.kron(target_proj, self.X)
+
+        for i in range(0, control):
+            controlled_proj = np.kron(self.I, controlled_proj)
+            target_proj = np.kron(self.I, target_proj)
+
+        result = controlled_proj + target_proj
+        return result
+
 
 if __name__ == '__main__':
     my_q_py = MyQPy()
-    my_q_py.bernstein_vazirani_alg('0010101')
+    my_q_py.bernstein_vazirani_alg('101')
