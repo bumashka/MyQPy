@@ -1,72 +1,10 @@
 import random
+
+import library
 from quantum_system import QuantumSystem
 import numpy as np
 
-
 class MyQPy:
-
-    def __init__(self):
-        self.X = np.array([
-            [0, 1],
-            [1, 0]
-        ], dtype=complex)
-
-        self.Z = np.array([
-            [1, 0],
-            [0, -1]
-        ], dtype=complex)
-
-        self.Y = np.array([
-            [0, 0],
-            [0, 0]
-        ], dtype=complex)
-
-        self.Fi = lambda a, b: a @ self.KET_0 + b @ self.KET_1
-
-        self.KET_0 = np.array([[1], [0]], dtype=complex)
-        self.HADAMARD = np.array([
-            [1, 1],
-            [1, -1]
-        ], dtype=complex) / np.sqrt(2)
-
-        self.I = np.array([
-            [1, 0],
-            [0, 1]
-        ], dtype=complex)
-
-        self.CNOT = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 0, 1],
-            [0, 0, 1, 0]
-        ], dtype=complex)
-
-    def ket_0(self):
-        return self.KET_0
-
-    def ket_1(self):
-        return self.X @ self.KET_0
-
-    def hadamard(self):
-        return self.HADAMARD
-
-    def cnot(self):
-        return self.CNOT
-
-    def x(self):
-        return self.X
-
-    def i(self):
-        return self.I
-
-    def z(self):
-        return self.Z
-
-    def projector_0(self):
-        return self.KET_0 @ np.transpose(self.KET_0)
-
-    def projector_1(self):
-        return self.ket_1() @ np.transpose(self.ket_1())
 
     def measure(self, state):
         # pr0 = np.abs(np.transpose(state)@self.KET_0) ** 2
@@ -77,8 +15,8 @@ class MyQPy:
         return False if sample else True
 
     def random_generator(self):
-        qubit = self.KET_0.copy()
-        qubit = self.HADAMARD @ qubit
+        qubit = library.ket_0()
+        qubit = library.hadamard() @ qubit
         result = self.measure(qubit)
         # print("random_generator returned " + str(result))
         return result
@@ -89,12 +27,12 @@ class MyQPy:
 
         eva_basis = self.random_generator()
 
-        qubit = self.prepare_qubit(my_bit, self.KET_0.copy(), my_basis)
+        qubit = self.prepare_qubit(my_bit, library.ket_0(), my_basis)
 
         received_qubit = qubit.copy()
 
         if eva_basis:
-            received_qubit = self.HADAMARD @ qubit
+            received_qubit = library.hadamard() @ qubit
 
         result = self.measure(received_qubit)
 
@@ -117,7 +55,7 @@ class MyQPy:
         return key
 
     def quantum_strategy(self):
-        shared_system = np.kron(self.KET_0, self.KET_0)
+        shared_system = np.kron(library.ket_0(), library.ket_0())
         your_qubit = np.kron(self.KET_0 @ np.transpose(self.KET_0), self.I) @ shared_system
         eve_qubit = np.kron(self.X @ self.KET_0 @ np.transpose(self.X @ self.KET_0), self.I) @ shared_system
         shared_system.register_state = qt.bell_state()
@@ -145,7 +83,7 @@ class MyQPy:
 
         # Шаг 1
         # qc.h(qr[1])
-        qc.hadamard(1)
+        qc.hadamard([1])
         # Шаг 2
         # qc.cx(qr[1], qr[2])
         qc.cnot(1, 2)
@@ -158,7 +96,7 @@ class MyQPy:
         # Шаг 4
         # qc.h(qr[0])
         # qc = (np.kron(self.HADAMARD, np.kron(self.I, self.I))) @ qc
-        qc.hadamard(1)
+        qc.hadamard([1])
 
         # Шаг 5 - измеряются 2 кубита Алисы, чтобы передать результат Бобу
         res_0 = qc.measure(0)
@@ -166,23 +104,25 @@ class MyQPy:
 
         # Шаг 6 - применяются гейт X и гейт Z в завиимости от того, какое из измерений дает результат 1.
         if res_0:
-            qc.x(2)
+            qc.x([2])
         if res_1:
-            qc.z(2)
+            qc.z([2])
+
+        print(f"Measure system:{[int(qc.measure(i)) for i in range(0, 3)]}")
         # qc.x(qr[2]).c_if(crx, 1)
         # qc.z(qr[2]).c_if(crz, 1)
         # qc.draw()
 
     def prepare_qubit(self, bit, qubit, basis):
         if bit:
-            qubit = self.X @ qubit
+            qubit = library.x() @ qubit
         if basis:
-            qubit = self.HADAMARD @ qubit
+            qubit = library.hadamard() @ qubit
         return qubit
 
     def bit_from_qubit(self):
         bit = self.random_generator()
-        qubit = self.prepare_qubit(bit, self.KET_0.copy(), False)
+        qubit = self.prepare_qubit(bit, library.ket_0(), False)
         result = self.measure(qubit)
         print("We prepared bit: " + str(bit))
         print("Eve got: " + str(result))
@@ -217,24 +157,24 @@ class MyQPy:
 
     def deutsch_oracle(self, type):
         if type == 0:
-            return np.kron(self.I, self.I)
+            return np.kron(library.i(), library.i())
         elif type == 1:
-            return np.kron(self.I, self.X)
+            return np.kron(library.i(), library.x())
         elif type == 2:
             return self.CNOT
         else:
-            return np.kron(self.X, self.I) @ self.CNOT @ np.kron(self.X, self.I)
+            return np.kron(library.x(), library.i()) @ self.CNOT @ np.kron(self.X, library.i())
 
     def deutsch_alg(self, type):
-        x = self.KET_0
+        x = library.ket_0()
 
-        y = self.X @ self.KET_0
+        y = library.ket_1()
 
-        xy = np.kron(self.HADAMARD, self.HADAMARD) @ np.kron(x, y)
+        xy = np.kron(library.hadamard(), library.hadamard()) @ np.kron(x, y)
 
         xy = self.deutsch_oracle(type) @ xy
 
-        xy = np.kron(self.HADAMARD, self.I) @ xy
+        xy = np.kron(library.hadamard(), library.i()) @ xy
 
         # дополнительная лекция по измерениям №5
         # считаем матрицу плотности полученного состояния, через внешнее произведение
@@ -243,7 +183,7 @@ class MyQPy:
         # trace - след матрицы, сумма элементов по диагонали
         # np.dot - скалярное произведение
 
-        prob_0 = np.trace(np.kron(self.KET_0 @ np.transpose(self.KET_0), self.I) @ rho)
+        prob_0 = np.trace(np.kron(library.projector_0(), library.i()) @ rho)
 
         return '[0>' if prob_0.round() > 0 else '[1>'
 
@@ -257,15 +197,15 @@ class MyQPy:
         number = list(number)
         n = len(number)
 
-        system = self.KET_0
-        hadamard_system = self.HADAMARD
+        system = library.ket_0()
+        hadamard_system = library.hadamard()
 
         for i in range(0, n - 1):
-            system = np.kron(system, self.KET_0)
-            hadamard_system = np.kron(hadamard_system, self.HADAMARD)
+            system = np.kron(system, library.ket_0())
+            hadamard_system = np.kron(hadamard_system, library.hadamard())
 
-        system = np.kron(system, self.X @ self.KET_0)
-        result_system = np.kron(hadamard_system, self.HADAMARD) @ system
+        system = np.kron(system, library.ket_1())
+        result_system = np.kron(hadamard_system, library.hadamard()) @ system
 
         oracle = np.eye(2 ** (n + 1))
         for i in range(0, n):
@@ -273,7 +213,7 @@ class MyQPy:
                 oracle = oracle @ self.build_up_CNOT(i, n)
         result_system = oracle @ result_system
 
-        result_system = np.kron(hadamard_system, self.HADAMARD) @ result_system
+        result_system = np.kron(hadamard_system, library.hadamard()) @ result_system
 
         # дополнительная лекция по измерениям №5
         # считаем матрицу плотности полученного состояния, через внешнее произведение
@@ -285,7 +225,7 @@ class MyQPy:
         for i in range(0, n):
             before_cubit = np.eye(2 ** (i)) if i > 0 else 1
             after_cubit = np.eye(2 ** (n - i))
-            projector = np.kron(before_cubit, np.kron(self.KET_0 @ np.transpose(self.KET_0), after_cubit))
+            projector = np.kron(before_cubit, np.kron(library.projector_0(), after_cubit))
             prob_0 = np.trace(projector @ rho)
             message.append('0') if prob_0.round() > 0 else message.append('1')
 
@@ -311,30 +251,31 @@ class MyQPy:
         result = controlled_proj + target_proj
         return result
 
-    def simon(self):
+    def simon(self, n):
         # Работаем в пространстве размерности n = 3
         # Создаём необходимые регистры
-        qc = QuantumSystem([0,0,0])
+        qc = QuantumSystem([0]*2*n)
 
         # Шаг 2. Применяем гейт Адамара ко всем кубитам первого регистра
-        qc.h(range(n))
+        qc.hadamard(range(n))
 
         # Шаг 3. Применяем U_f
-        qc.cx(qr1[0], qr2[0])
+        qc.cnot(0, n)
 
         # Шаг 4. Производим измерение второго регистра
-        qc.measure(qr2, cr1)
+        print(f"Measure 2nd register:{ [int(qc.measure(i)) for i in range(n, n*2)]}")
+        # qc.measure(n)
 
         # Шаг 5. Ещё раз применяем гейт адамара к каждому из кубитов
-        qc.h(range(n))
+        qc.hadamard(range(n))
 
         # Шаг 6. Производим измерение первого регистра
-        qc.measure(qr1, cr1)
+        # qc.measure(qr1, cr1)
+        print(f"Measure 1nd register:{[int(qc.measure(i)) for i in range(0, n)]}")
 
         # Рисуем схему
-        qc.draw()
-
+        # qc.draw()
 
 if __name__ == '__main__':
     my_q_py = MyQPy()
-    my_q_py.teleportation()
+    my_q_py.simon(3)
