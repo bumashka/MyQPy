@@ -1,5 +1,5 @@
 import random
-
+from quantum_system import QuantumSystem
 import numpy as np
 
 
@@ -43,6 +43,7 @@ class MyQPy:
 
     def ket_0(self):
         return self.KET_0
+
     def ket_1(self):
         return self.X @ self.KET_0
 
@@ -54,6 +55,18 @@ class MyQPy:
 
     def x(self):
         return self.X
+
+    def i(self):
+        return self.I
+
+    def z(self):
+        return self.Z
+
+    def projector_0(self):
+        return self.KET_0 @ np.transpose(self.KET_0)
+
+    def projector_1(self):
+        return self.ket_1() @ np.transpose(self.ket_1())
 
     def measure(self, state):
         # pr0 = np.abs(np.transpose(state)@self.KET_0) ** 2
@@ -124,34 +137,41 @@ class MyQPy:
     def turn_qubit(self, angle):
         pass
 
-    def teleportation(self, a, b):
+    def teleportation(self):
 
         # создаем схему
-        qc = np.kron(self.Fi(a, b), np.kron(self.KET_0, self.KET_0))
+        qc = QuantumSystem([0, 0, 0])
+        #qc = np.kron(self.Fi(a, b), np.kron(self.KET_0, self.KET_0))
 
         # Шаг 1
         # qc.h(qr[1])
-        qc = (np.kron(self.I, np.kron(self.HADAMARD, self.I))) @ qc
+        qc.hadamard(1)
         # Шаг 2
         # qc.cx(qr[1], qr[2])
-        qc = self.build_up_CNOT(1, 2) @ qc
+        qc.cnot(1, 2)
+        # qc = self.build_up_CNOT(1, 2) @ qc
 
         # Шаг 3
         # qc.cx(qr[0], qr[1])
-        qc = self.build_up_CNOT(0, 1) @ qc
+        #qc = self.build_up_CNOT(0, 1) @ qc
+        qc.cnot(0, 1)
         # Шаг 4
         # qc.h(qr[0])
-        qc = (np.kron(self.HADAMARD, np.kron(self.I, self.I))) @ qc
+        # qc = (np.kron(self.HADAMARD, np.kron(self.I, self.I))) @ qc
+        qc.hadamard(1)
 
         # Шаг 5 - измеряются 2 кубита Алисы, чтобы передать результат Бобу
-        res_0 = qc.measure(qr[0], crz)
-        res_1 = qc.measure(qr[1], crx)
+        res_0 = qc.measure(0)
+        res_1 = qc.measure(1)
 
         # Шаг 6 - применяются гейт X и гейт Z в завиимости от того, какое из измерений дает результат 1.
-        qc.x(qr[2]).c_if(crx, 1)
-        qc.z(qr[2]).c_if(crz, 1)
-
-        qc.draw()
+        if res_0:
+            qc.x(2)
+        if res_1:
+            qc.z(2)
+        # qc.x(qr[2]).c_if(crx, 1)
+        # qc.z(qr[2]).c_if(crz, 1)
+        # qc.draw()
 
     def prepare_qubit(self, bit, qubit, basis):
         if bit:
@@ -291,7 +311,30 @@ class MyQPy:
         result = controlled_proj + target_proj
         return result
 
+    def simon(self):
+        # Работаем в пространстве размерности n = 3
+        # Создаём необходимые регистры
+        qc = QuantumSystem([0,0,0])
+
+        # Шаг 2. Применяем гейт Адамара ко всем кубитам первого регистра
+        qc.h(range(n))
+
+        # Шаг 3. Применяем U_f
+        qc.cx(qr1[0], qr2[0])
+
+        # Шаг 4. Производим измерение второго регистра
+        qc.measure(qr2, cr1)
+
+        # Шаг 5. Ещё раз применяем гейт адамара к каждому из кубитов
+        qc.h(range(n))
+
+        # Шаг 6. Производим измерение первого регистра
+        qc.measure(qr1, cr1)
+
+        # Рисуем схему
+        qc.draw()
+
 
 if __name__ == '__main__':
     my_q_py = MyQPy()
-    print(f"est_win_probability:{my_q_py.chsh()}")
+    my_q_py.teleportation()
