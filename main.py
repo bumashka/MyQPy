@@ -1,45 +1,73 @@
+import random
+
 import numpy as np
 
 
 class MyQPy:
 
     def __init__(self):
+        self.X = np.array([
+            [0, 1],
+            [1, 0]
+        ], dtype=complex)
+
+        self.Z = np.array([
+            [1, 0],
+            [0, -1]
+        ], dtype=complex)
+
+        self.Y = np.array([
+            [0, 0],
+            [0, 0]
+        ], dtype=complex)
+
+        self.Fi = lambda a, b: a @ self.KET_0 + b @ self.KET_1
+
         self.KET_0 = np.array([[1], [0]], dtype=complex)
         self.HADAMARD = np.array([
             [1, 1],
             [1, -1]
         ], dtype=complex) / np.sqrt(2)
 
-        self.X = np.array([
-            [0, 1],
-            [1, 0]
-        ], dtype=complex)
-
         self.I = np.array([
             [1, 0],
             [0, 1]
         ], dtype=complex)
 
-        self.CNOT = np. array([
+        self.CNOT = np.array([
             [1, 0, 0, 0],
             [0, 1, 0, 0],
             [0, 0, 0, 1],
             [0, 0, 1, 0]
         ], dtype=complex)
 
+    def ket_0(self):
+        return self.KET_0
+    def ket_1(self):
+        return self.X @ self.KET_0
+
+    def hadamard(self):
+        return self.HADAMARD
+
+    def cnot(self):
+        return self.CNOT
+
+    def x(self):
+        return self.X
+
     def measure(self, state):
         # pr0 = np.abs(np.transpose(state)@self.KET_0) ** 2
         pr0 = np.abs(state[0, 0]) ** 2
-        #print("Measure\npr0: " + str(pr0))
+        # print("Measure\npr0: " + str(pr0))
         sample = np.random.random() <= pr0
-        #print("sample: " + str(sample))
+        # print("sample: " + str(sample))
         return False if sample else True
 
     def random_generator(self):
         qubit = self.KET_0.copy()
         qubit = self.HADAMARD @ qubit
         result = self.measure(qubit)
-        #print("random_generator returned " + str(result))
+        # print("random_generator returned " + str(result))
         return result
 
     def send_single_bit_with_bb84(self):
@@ -68,12 +96,62 @@ class MyQPy:
 
     def bb84(self, number_of_bits):
         key = ""
-        while number_of_bits>0:
+        while number_of_bits > 0:
             result = self.send_single_bit_with_bb84()
             if result["my_basis"] == result["eva_basis"]:
                 key = ''.join([key, result["result"]])
                 number_of_bits -= 1
-        print(key)
+        return key
+
+    def quantum_strategy(self):
+        shared_system = np.kron(self.KET_0, self.KET_0)
+        your_qubit = np.kron(self.KET_0 @ np.transpose(self.KET_0), self.I) @ shared_system
+        eve_qubit = np.kron(self.X @ self.KET_0 @ np.transpose(self.X @ self.KET_0), self.I) @ shared_system
+        shared_system.register_state = qt.bell_state()
+        your_angles = [90 * np.pi / 180, 0]
+        eve_angles = [45 * np.pi / 180, 135 * np.pi / 180]
+
+        def you(your_input: int):
+            your_qubit.ry(your_angles[your_input])
+            return your_qubit.measure()
+
+        def eve(eve_input: int):
+            eve_qubit.ry(eve_angles[eve_input])
+            return eve_qubit.measure()
+
+        return you, eve
+
+    def turn_qubit(self, angle):
+        pass
+
+    def teleportation(self, a, b):
+
+        # создаем схему
+        qc = np.kron(self.Fi(a, b), np.kron(self.KET_0, self.KET_0))
+
+        # Шаг 1
+        # qc.h(qr[1])
+        qc = (np.kron(self.I, np.kron(self.HADAMARD, self.I))) @ qc
+        # Шаг 2
+        # qc.cx(qr[1], qr[2])
+        qc = self.build_up_CNOT(1, 2) @ qc
+
+        # Шаг 3
+        # qc.cx(qr[0], qr[1])
+        qc = self.build_up_CNOT(0, 1) @ qc
+        # Шаг 4
+        # qc.h(qr[0])
+        qc = (np.kron(self.HADAMARD, np.kron(self.I, self.I))) @ qc
+
+        # Шаг 5 - измеряются 2 кубита Алисы, чтобы передать результат Бобу
+        res_0 = qc.measure(qr[0], crz)
+        res_1 = qc.measure(qr[1], crx)
+
+        # Шаг 6 - применяются гейт X и гейт Z в завиимости от того, какое из измерений дает результат 1.
+        qc.x(qr[2]).c_if(crx, 1)
+        qc.z(qr[2]).c_if(crz, 1)
+
+        qc.draw()
 
     def prepare_qubit(self, bit, qubit, basis):
         if bit:
@@ -98,12 +176,24 @@ class MyQPy:
     def preform_bb84(self):
         key = int(self.bb84(96), base=2)
         print("We got the key: " + hex(key))
-        message = int("110110000011110111011100100101101101100000111101110111000000110111011000001111011101110010111011", base=2)
+        message = int(
+            "110110000011110111011100100101101101100000111101110111000000110111011000001111011101110010111011", base=2)
         print("We will use the key to send message: " + hex(message))
         encrypted_message = message ^ key
         print("Encrypted message: " + hex(encrypted_message))
         decrypted_message = encrypted_message ^ key
         print("Eva decrypted and got message: " + hex(decrypted_message))
+
+    def chsh(self):
+        sum = 0
+        n_games = 1000
+        for idx_game in range(n_games):
+            you, eve = lambda your_input: 0, lambda eve_input: 0
+            your_input, eve_input = random.randint(0, 1), random.randint(0, 1)
+            parity = 0 if you(your_input) == eve(eve_input) else 1
+            res = parity == (your_input and eve_input)
+            sum = sum + res
+        return sum / n_games
 
     def deutsch_oracle(self, type):
         if type == 0:
@@ -157,7 +247,7 @@ class MyQPy:
         system = np.kron(system, self.X @ self.KET_0)
         result_system = np.kron(hadamard_system, self.HADAMARD) @ system
 
-        oracle = np.eye(2**(n+1))
+        oracle = np.eye(2 ** (n + 1))
         for i in range(0, n):
             if number[i] == '1':
                 oracle = oracle @ self.build_up_CNOT(i, n)
@@ -173,8 +263,8 @@ class MyQPy:
         # np.dot - скалярное произведение
         message = []
         for i in range(0, n):
-            before_cubit = np.eye(2**(i)) if i > 0 else 1
-            after_cubit = np.eye(2**(n - i))
+            before_cubit = np.eye(2 ** (i)) if i > 0 else 1
+            after_cubit = np.eye(2 ** (n - i))
             projector = np.kron(before_cubit, np.kron(self.KET_0 @ np.transpose(self.KET_0), after_cubit))
             prob_0 = np.trace(projector @ rho)
             message.append('0') if prob_0.round() > 0 else message.append('1')
@@ -204,4 +294,4 @@ class MyQPy:
 
 if __name__ == '__main__':
     my_q_py = MyQPy()
-    my_q_py.bernstein_vazirani_alg('101')
+    print(f"est_win_probability:{my_q_py.chsh()}")
