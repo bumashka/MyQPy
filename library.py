@@ -10,9 +10,9 @@ Z = np.array([
     [0, -1]
 ], dtype=complex)
 
-Y = np.array([
-    [0, 0],
-    [0, 0]
+RY = lambda phi: np.array([
+    [np.cos(phi / 2), -np.sin(phi / 2)],
+    [np.sin(phi / 2), np.cos(phi / 2)]
 ], dtype=complex)
 
 # self.Fi = lambda a, b: a @ self.KET_0 + b @ self.KET_1
@@ -71,3 +71,15 @@ def projector_0():
 
 def projector_1():
     return ket_1() @ np.transpose(ket_1())
+
+def measure(state):
+    # pr0 = np.abs(np.transpose(state)@self.KET_0) ** 2
+    pr0 = np.abs(state[0, 0]) ** 2
+    sample = np.random.random() <= pr0
+    return False if sample else True
+
+def random_generator():
+    qubit = ket_0()
+    qubit = hadamard() @ qubit
+    result = measure(qubit)
+    return result

@@ -8,10 +8,16 @@ class QuantumSystem:
         self.system_size = len(initial_states)
         self.quantum_system = 1
         for i in range(0, self.system_size):
-            if initial_states[i] == 0:
+            l = type(initial_states[i])
+            if type(initial_states[i]) is int and initial_states[i] == 0:
                 self.quantum_system = np.kron(self.quantum_system, library.ket_0())
-            else:
+            elif type(initial_states[i]) is int and initial_states[i] == 1:
                 self.quantum_system = np.kron(self.quantum_system, library.ket_1())
+            else:
+                self.quantum_system = np.kron(self.quantum_system, initial_states[i])
+
+    def return_qs_states(self):
+        return self.quantum_system
 
     def simple_gate(self, operation, reg_range = None):
         if reg_range is None:
@@ -33,6 +39,9 @@ class QuantumSystem:
 
     def z(self, reg_range = None):
         self.simple_gate(library.z(), reg_range)
+
+    def ry(self, angle, reg_range = None):
+        self.simple_gate(library.RY(angle), reg_range)
 
     def cnot(self, control: int, target: int):
 
@@ -66,4 +75,4 @@ class QuantumSystem:
 
         prob_0 = np.trace(np.kron(before_cubit, np.kron(library.projector_0(), after_cubit)) @ rho)
 
-        return prob_0.round() > 0
+        return prob_0
