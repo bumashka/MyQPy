@@ -1,16 +1,16 @@
 from quantum_system import QuantumSystem
-def simon(self, n):
+def simon(n, f):
     qc = QuantumSystem([0] * 2 * n)
 
     qc.hadamard(range(n))
 
-    qc.cnot(1, n + 1)
-    qc.cnot(2, n + 2)
-
-    print(f"Measure 2nd register:{[qc.measure(i) for i in range(n, n * 2)]}")
+    qc.cnot(f[0][0], f[0][1])
+    qc.cnot(f[1][0], f[1][1])
 
     qc.hadamard(range(n))
 
-    print(f"Measure 1nd register:{[qc.measure(i) for i in range(0, n)]}")
+    qc.measure([0, 1, 2])
 
-simon(3)
+n = 3
+f = [[1, n+1], [2, n+2]]
+simon(n, f)

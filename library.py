@@ -15,8 +15,6 @@ RY = lambda phi: np.array([
     [np.sin(phi / 2), np.cos(phi / 2)]
 ], dtype=complex)
 
-# self.Fi = lambda a, b: a @ self.KET_0 + b @ self.KET_1
-
 KET_0 = np.array([[1], [0]], dtype=complex)
 
 HADAMARD = np.array([
