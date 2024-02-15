@@ -67,11 +67,12 @@ class QuantumSystem:
 
         self.quantum_system = result @ self.quantum_system
 
-    def measure(self, registers: list):
+    def measure(self, registers: list, print_res=True):
         if len(registers) > 1:
             print("Measure system: ")
-        else:
+        elif print_res:
             print("Measure individual qubit: ")
+        prob = 0
         rho = np.outer(self.quantum_system, np.conj(self.quantum_system))
         for i in range(0, 2**len(registers)):
             before_cubit = np.eye(2 ** registers[0]) if registers[0] > 0 else 1
@@ -82,4 +83,6 @@ class QuantumSystem:
                 projector = np.kron(projector, library.projector_0() if
                                     projector_view[j] == '0' else library.projector_1())
             prob = np.trace(np.kron(before_cubit, np.kron(projector, after_cubit)) @ rho)
-            print(f"{''.join(projector_view)}: {prob}\n")
+            if print_res:
+                print(f"{''.join(projector_view)}: {prob}\n")
+        return prob
